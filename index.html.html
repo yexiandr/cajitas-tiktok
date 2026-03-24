@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cajitas de Premios - TikTok Live</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: transparent;
+    font-family: 'Nunito', sans-serif;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  #app {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 16px;
+  }
+
+  /* ── TÍTULO ── */
+  .title-bar {
+    background: linear-gradient(135deg, #FF6B35, #FFD700);
+    border-radius: 50px;
+    padding: 8px 28px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 4px 20px rgba(255,107,53,0.5);
+  }
+  .title-bar h1 {
+    font-family: 'Fredoka One', cursive;
+    font-size: 22px;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    letter-spacing: 1px;
+  }
+
+  /* ── GRID DE CAJITAS ── */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    width: 100%;
+    max-width: 520px;
+  }
+
+  .box {
+    aspect-ratio: 1;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: default;
+    transition: transform 0.2s;
+    background: linear-gradient(145deg, #2a1a6e, #1a0f4a);
+    border: 2px solid rgba(255,215,0,0.3);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+
+  .box.closed {
+    animation: float 3s ease-in-out infinite;
+  }
+  .box.closed:nth-child(odd) { animation-delay: 0.5s; }
+  .box.closed:nth-child(3n) { animation-delay: 1s; }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-3px); }
+  }
+
+  .box-num {
+    position: absolute;
+    top: 5px;
+    left: 8px;
+    font-size: 10px;
+    font-weight: 900;
+    color: rgba(255,215,0,0.6);
+    font-family: 'Fredoka One', cursive;
+  }
+
+  .box-icon {
+    font-size: 26px;
+    line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  }
+
+  /* Estados de la caja */
+  .box.opened-prize {
+    background: linear-gradient(145deg, #1a4a1a, #0f2d0f);
+    border-color: #4ade80;
+    animation: none;
+  }
+  .box.opened-prize .box-icon { font-size: 22px; }
+  .box.opened-prize .prize-val {
+    font-family: 'Fredoka One', cursive;
+    font-size: 14px;
+    color: #4ade80;
+    line-height: 1.1;
+    text-shadow: 0 0 8px rgba(74,222,128,0.6);
+  }
+
+  .box.opened-empty {
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+    border-color: rgba(255,255,255,0.1);
+    opacity: 0.5;
+    animation: none;
+  }
+  .box.opened-empty .box-icon { font-size: 20px; opacity: 0.4; }
+
+  /* Premio grande por tipo */
+  .box.p200 { border-color: #a855f7; }
+  .box.p200 .prize-val { color: #c084fc; text-shadow: 0 0 8px rgba(168,85,247,0.7); }
+  .box.p200 { background: linear-gradient(145deg, #2e1065, #1a0845); }
+
+  .box.p100 { border-color: #FFD700; }
+  .box.p100 .prize-val { color: #FFD700; text-shadow: 0 0 8px rgba(255,215,0,0.7); }
+  .box.p100 { background: linear-gradient(145deg, #3d2e00, #261c00); }
+
+  .box.p50 { border-color: #38bdf8; }
+  .box.p50 .prize-val { color: #38bdf8; text-shadow: 0 0 8px rgba(56,189,248,0.7); }
+  .box.p50 { background: linear-gradient(145deg, #0c2a3d, #071a27); }
+
+  .box.p30 { border-color: #fb923c; }
+  .box.p30 .prize-val { color: #fb923c; text-shadow: 0 0 8px rgba(251,146,60,0.7); }
+  .box.p30 { background: linear-gradient(145deg, #3d1a00, #261000); }
+
+  /* ── ANIMACIÓN AL ABRIR ── */
+  @keyframes popOpen {
+    0%   { transform: scale(0.5) rotate(-10deg); opacity: 0; }
+    50%  { transform: scale(1.2) rotate(5deg); }
+    70%  { transform: scale(0.95) rotate(-2deg); }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  .box.opening { animation: popOpen 0.6s cubic-bezier(0.34,1.56,0.64,1) forwards !important; }
+
+  /* ── TOAST NOTIFICACIÓN ── */
+  #toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: linear-gradient(135deg, #1a0f4a, #2a1a6e);
+    border: 2px solid #FFD700;
+    border-radius: 50px;
+    padding: 10px 22px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 20px rgba(255,215,0,0.3);
+    transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    z-index: 100;
+    min-width: 260px;
+    justify-content: center;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast .toast-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #FF6B35, #FFD700);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 900; color: white;
+    flex-shrink: 0;
+  }
+  #toast .toast-text { flex: 1; }
+  #toast .toast-user {
+    font-size: 13px; font-weight: 900;
+    color: #FFD700;
+    line-height: 1.2;
+  }
+  #toast .toast-msg {
+    font-size: 11px; color: rgba(255,255,255,0.7);
+    line-height: 1.2;
+  }
+  #toast .toast-prize {
+    font-family: 'Fredoka One', cursive;
+    font-size: 18px;
+    color: #4ade80;
+    text-shadow: 0 0 10px rgba(74,222,128,0.7);
+    flex-shrink: 0;
+  }
+  #toast .toast-prize.empty {
+    color: rgba(255,255,255,0.3);
+    font-size: 14px;
+  }
+
+  /* ── PARTÍCULAS ── */
+  .particle {
+    position: fixed;
+    pointer-events: none;
+    font-size: 20px;
+    animation: fly 1.2s ease-out forwards;
+    z-index: 200;
+  }
+  @keyframes fly {
+    0%   { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-120px) scale(0.3) rotate(360deg); opacity: 0; }
+  }
+
+  /* ── BARRA PROGRESO ── */
+  .progress-bar {
+    width: 100%;
+    max-width: 520px;
+    margin-top: 10px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 50px;
+    height: 8px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #FF6B35, #FFD700);
+    border-radius: 50px;
+    transition: width 0.5s ease;
+    box-shadow: 0 0 10px rgba(255,215,0,0.5);
+  }
+  .progress-label {
+    display: flex; justify-content: space-between;
+    max-width: 520px; width: 100%;
+    margin-top: 5px;
+  }
+  .progress-label span {
+    font-size: 11px; color: rgba(255,255,255,0.5); font-weight: 700;
+  }
+  .progress-label .coins {
+    color: #FFD700; font-family: 'Fredoka One', cursive; font-size: 13px;
+  }
+
+  /* ── PANEL DEMO (solo en modo test) ── */
+  #demo-panel {
+    position: fixed;
+    top: 10px; right: 10px;
+    background: rgba(0,0,0,0.85);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 12px;
+    padding: 10px 14px;
+    z-index: 999;
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+  }
+  #demo-panel button {
+    display: block; width: 100%;
+    margin-top: 6px; padding: 6px 10px;
+    background: linear-gradient(135deg, #FF6B35, #FFD700);
+    border: none; border-radius: 8px;
+    color: white; font-weight: 900; font-size: 11px;
+    cursor: pointer; font-family: 'Nunito', sans-serif;
+  }
+  #demo-panel input {
+    width: 100%; padding: 4px 8px; margin-top: 4px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px; color: white; font-size: 11px;
+  }
+  #demo-panel label { display: block; margin-top: 6px; font-size: 10px; opacity: 0.6; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="title-bar">
+    <span style="font-size:22px">🎩</span>
+    <h1>¡CAJITAS DE PREMIOS!</h1>
+    <span style="font-size:22px">🪙</span>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  <div class="progress-label">
+    <span id="prog-text">0 / 15 premios encontrados</span>
+    <span class="coins" id="prog-coins">🪙 0 monedas repartidas</span>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast">
+  <div class="toast-avatar" id="toast-avatar">?</div>
+  <div class="toast-text">
+    <div class="toast-user" id="toast-user">Usuario</div>
+    <div class="toast-msg" id="toast-msg">abrió la caja #1</div>
+  </div>
+  <div class="toast-prize" id="toast-prize">+100 🪙</div>
+</div>
+
+<!-- Estado conexión TikFinity -->
+<div id="conn-status" style="
+  position:fixed; bottom:8px; left:12px;
+  font-size:11px; font-weight:700; font-family:'Nunito',sans-serif;
+  color:#FFD700; opacity:0.8;
+  text-shadow:0 1px 3px rgba(0,0,0,0.8);
+  pointer-events:none; z-index:50;
+">⚙️ Iniciando...</div>
+
+<!-- Panel Demo (quitar en producción) -->
+<div id="demo-panel">
+  <strong style="color:white">🧪 Demo / Test</strong>
+  <label>Nombre del viewer:</label>
+  <input type="text" id="demo-user" value="@juanito123" />
+  <button onclick="testGift()">🎩 Simular regalo</button>
+  <button onclick="resetGame()" style="background:rgba(255,255,255,0.15);margin-top:4px">🔄 Reiniciar</button>
+</div>
+
+<script>
+// ════════════════════════════════════════
+//  CONFIGURACIÓN
+// ════════════════════════════════════════
+const CONFIG = {
+  // Nombre del regalo de TikTok que activa una caja
+  // TikFinity enviará este nombre en el webhook
+  giftTrigger: "Hat",          // nombre en inglés del sombrero en TikTok
+  giftTriggerES: "Sombrero",   // nombre en español (para mostrar)
+
+  // Premios disponibles (suman 2000 monedas, solo 15 cajitas tienen premio)
+  prizes: [200, 200, 200, 200, 200, 100, 100, 100, 50, 50, 50, 50, 30, 30, 30,
+           0, 0, 0, 0, 0],     // 0 = vacía
+
+  totalBoxes: 20,
+  prizeEmoji: { 200: "💜", 100: "🥇", 50: "💙", 30: "🧡", 0: "💨" },
+  prizeIcon:  { 200: "🎆", 100: "🪙", 50: "⭐", 30: "🎁", 0: "💨" },
+};
+
+// ════════════════════════════════════════
+//  ESTADO
+// ════════════════════════════════════════
+let prizes = [];
+let opened = [];
+let openedCount = 0;
+let totalCoins = 0;
+let toastTimer = null;
+
+// ════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function resetGame() {
+  prizes = shuffle([...CONFIG.prizes]);
+  opened = Array(CONFIG.totalBoxes).fill(false);
+  openedCount = 0;
+  totalCoins = 0;
+  renderGrid();
+  updateProgress();
+}
+
+function renderGrid() {
+  const grid = document.getElementById("grid");
+  grid.innerHTML = "";
+  prizes.forEach((p, i) => {
+    const div = document.createElement("div");
+    div.className = "box closed";
+    div.id = "box-" + i;
+    div.innerHTML = `
+      <span class="box-num">${i + 1}</span>
+      <span class="box-icon">🎁</span>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+// ════════════════════════════════════════
+//  ABRIR CAJA
+// ════════════════════════════════════════
+function openNextBox(username) {
+  // Busca la siguiente caja sin abrir
+  const nextIdx = opened.indexOf(false);
+  if (nextIdx === -1) return; // todas abiertas
+
+  opened[nextIdx] = true;
+  const prize = prizes[nextIdx];
+  openedCount++;
+  if (prize > 0) totalCoins += prize;
+
+  const box = document.getElementById("box-" + nextIdx);
+  box.classList.remove("closed");
+  box.classList.add("opening");
+
+  setTimeout(() => {
+    box.classList.remove("opening");
+    if (prize > 0) {
+      box.classList.add("opened-prize", "p" + prize);
+      box.innerHTML = `
+        <span class="box-num">${nextIdx + 1}</span>
+        <span class="box-icon">${CONFIG.prizeIcon[prize]}</span>
+        <span class="prize-val">+${prize}🪙</span>
+      `;
+      spawnParticles(box, prize);
+    } else {
+      box.classList.add("opened-empty");
+      box.innerHTML = `
+        <span class="box-num">${nextIdx + 1}</span>
+        <span class="box-icon">💨</span>
+      `;
+    }
+    showToast(username, nextIdx + 1, prize);
+    updateProgress();
+  }, 300);
+}
+
+// ════════════════════════════════════════
+//  TOAST
+// ════════════════════════════════════════
+function showToast(username, boxNum, prize) {
+  const toast = document.getElementById("toast");
+  const initial = (username.replace("@","")[0] || "?").toUpperCase();
+
+  document.getElementById("toast-avatar").textContent = initial;
+  document.getElementById("toast-user").textContent = username;
+  document.getElementById("toast-msg").textContent = `abrió la caja #${boxNum}`;
+
+  const prizeEl = document.getElementById("toast-prize");
+  if (prize > 0) {
+    prizeEl.textContent = `+${prize} 🪙`;
+    prizeEl.className = "toast-prize";
+  } else {
+    prizeEl.textContent = "¡Vacía!";
+    prizeEl.className = "toast-prize empty";
+  }
+
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 3500);
+}
+
+// ════════════════════════════════════════
+//  PARTÍCULAS
+// ════════════════════════════════════════
+function spawnParticles(box, prize) {
+  const rect = box.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+  const emojis = prize >= 200 ? ["💜","✨","🎆","⭐","💫"] :
+                 prize >= 100 ? ["🪙","✨","⭐","💛"] :
+                                ["🎁","✨","⭐"];
+  for (let i = 0; i < 6; i++) {
+    const p = document.createElement("div");
+    p.className = "particle";
+    p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    p.style.left = (cx + (Math.random() - 0.5) * 60) + "px";
+    p.style.top = cy + "px";
+    p.style.animationDelay = (i * 0.06) + "s";
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 1400);
+  }
+}
+
+// ════════════════════════════════════════
+//  PROGRESO
+// ════════════════════════════════════════
+function updateProgress() {
+  const prizesFound = opened.filter((o, i) => o && prizes[i] > 0).length;
+  const pct = (openedCount / CONFIG.totalBoxes) * 100;
+  document.getElementById("prog-fill").style.width = pct + "%";
+  document.getElementById("prog-text").textContent =
+    `${prizesFound} / 15 premios encontrados`;
+  document.getElementById("prog-coins").textContent =
+    `🪙 ${totalCoins} monedas repartidas`;
+}
+
+// ════════════════════════════════════════
+//  DEMO / TEST
+// ════════════════════════════════════════
+function testGift() {
+  const user = document.getElementById("demo-user").value || "@viewer";
+  openNextBox(user);
+}
+
+// ════════════════════════════════════════
+//  CONEXIÓN TIKFINITY
+//  Método: TikFinity Widget Token (URL param)
+//
+//  CÓMO OBTENER EL TOKEN:
+//  1. Entra a tikfinity.zerody.one
+//  2. Ve a "Widgets" en el menú izquierdo
+//  3. Crea un widget tipo "Custom HTML/URL"
+//  4. Copia el "Widget Token" que aparece
+//  5. Pega tu URL de GitHub así:
+//     https://TU_USUARIO.github.io/cajitas-tiktok/?token=TU_TOKEN
+//
+//  TikFinity enviará los eventos en tiempo real
+//  via WebSocket usando ese token.
+// ════════════════════════════════════════
+
+const STATUS = {
+  el: null,
+  set(msg, color) {
+    if (!this.el) this.el = document.getElementById("conn-status");
+    if (this.el) { this.el.textContent = msg; this.el.style.color = color; }
+  }
+};
+
+function getTikFinityToken() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("token") || params.get("widgetToken") || null;
+}
+
+function connectTikFinity() {
+  const token = getTikFinityToken();
+
+  if (!token) {
+    STATUS.set("⚠️ Sin token — modo demo activo", "#FFD700");
+    console.log("[TikFinity] No hay token en la URL. Usa ?token=TU_TOKEN");
+    return;
+  }
+
+  STATUS.set("🔄 Conectando a TikFinity...", "#aaa");
+
+  // TikFinity WebSocket oficial para widgets externos
+  const wsUrl = `wss://tikfinity.zerody.one/widget/ws?token=${token}`;
+
+  function connect() {
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      STATUS.set("🟢 TikFinity conectado", "#4ade80");
+      console.log("[TikFinity] Conectado ✓");
+      // Ocultar panel demo cuando hay conexión real
+      const panel = document.getElementById("demo-panel");
+      if (panel) panel.style.display = "none";
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        // TikFinity evento de regalo
+        const isGiftEvent = data.type === "gift"
+          || data.event === "gift"
+          || data.eventType === "gift"
+          || (data.data && data.data.type === "gift");
+
+        if (isGiftEvent) {
+          const payload   = data.data || data;
+          const giftName  = (payload.giftName || payload.gift || payload.name || "").toLowerCase();
+          const username  = "@" + (payload.uniqueId || payload.username || payload.user || "viewer");
+          const giftCount = parseInt(payload.repeatCount || payload.count || 1);
+
+          // Regalos que activan una cajita
+          // 🎩 Sombrero — puedes agregar más abajo
+          const triggerGifts = [
+            "hat", "sombrero", "top hat", "tophat",
+            "party hat", "cowboy hat", "cap"
+          ];
+
+          const isTrigger = triggerGifts.some(n => giftName.includes(n));
+
+          if (isTrigger) {
+            // Si mandan x unidades del regalo, abrir x cajitas
+            for (let i = 0; i < giftCount; i++) {
+              setTimeout(() => openNextBox(username), i * 600);
+            }
+          }
+        }
+      } catch(e) {
+        console.warn("[TikFinity] Parse error:", e);
+      }
+    };
+
+    ws.onerror = (e) => {
+      STATUS.set("🔴 Error de conexión", "#f87171");
+      console.warn("[TikFinity] Error:", e);
+    };
+
+    ws.onclose = () => {
+      STATUS.set("🟡 Reconectando...", "#FFD700");
+      setTimeout(connect, 5000);
+    };
+  }
+
+  connect();
+}
+
+// ════════════════════════════════════════
+//  ARRANCAR
+// ════════════════════════════════════════
+resetGame();
+connectTikFinity();
+</script>
+</body>
+</html>
